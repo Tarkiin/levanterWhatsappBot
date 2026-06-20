@@ -2,6 +2,10 @@
 
 A powerful and feature-rich WhatsApp bot supporting multiple sessions, designed for seamless automation and enhanced user experience.
 
+### Maintenance documentation
+
+- [Compatibilidad LID, comandos ignorados y actualizaciones seguras](docs/COMPATIBILIDAD_LID_Y_ACTUALIZACIONES.md)
+
 ### Features
 
 - **Multi-Session Support** – Manage multiple accounts effortlessly.
