@@ -106,7 +106,7 @@ module.exports = {
   RENDER_API_KEY: (process.env.RENDER_API_KEY || '').trim(),
   TIMEZONE: process.env.TIMEZONE,
   CMD_REACTION: process.env.CMD_REACTION || 'true',
-  AUTO_UPDATE: process.env.AUTO_UPDATE || 'true',
+  AUTO_UPDATE: 'false',
   WHITE_LIST: process.env.WHITE_LIST || '',
   BOT_LANG: process.env.BOT_LANG || 'en',
   YT_COOKIE: process.env.YT_COOKIE,

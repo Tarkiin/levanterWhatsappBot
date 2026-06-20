@@ -1,3 +1,4 @@
+const { enableSudoLidDispatch } = require('./lib/runtimeCompatibility')
 const { Client, logger } = require('./lib/client')
 const { DATABASE, VERSION } = require('./config')
 const { stopInstance } = require('./lib/pm2')
@@ -17,6 +18,7 @@ const start = async () => {
   }
 
   const bot = new Client()
+  enableSudoLidDispatch(bot)
 
   try {
     await bot.connect()
