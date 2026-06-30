@@ -19,6 +19,10 @@ const {
 
 const FORM_URL =
   'https://docs.google.com/forms/d/e/1FAIpQLSeGWS3BFtfPgtk2xUg1GZMKA-LpU6kPEWOm16u4RCk-X-GGrQ/viewform'
+const FORM_MESSAGE = `*Formulario de contratacion de transporte AnimalesExpress*
+\`En caso de que rellene el formulario para contratar avise para que le pasen a revisión\`
+
+${FORM_URL}`
 const sessions = new Map()
 const SESSION_TTL_MS = 30 * 60 * 1000
 
@@ -233,11 +237,12 @@ bot(
     if (lower === 'id') {
       return send(message, `ID de este chat:\n${message.jid}`)
     }
-    if (!config.enabled) return send(message, 'El asistente de AnimalesExpress está desactivado.')
 
     if (!command || lower === 'ayuda') return send(message, helpText(staff))
 
-    if (lower === 'formulario') return send(message, `*Formulario de AnimalesExpress*\n${FORM_URL}`)
+    if (lower === 'formulario') return send(message, FORM_MESSAGE)
+
+    if (!config.enabled) return send(message, 'El asistente de AnimalesExpress está desactivado.')
 
     if (lower === 'rutas') {
       try {
