@@ -342,9 +342,32 @@ const nextQuestion = (session) => {
   return ''
 }
 
-const formatClientJid = (jid) => {
-  const number = normalizePhone(String(jid).split('@')[0].split(':')[0])
-  return number ? `+${number}` : jid
+const getClientPhoneJid = (message = {}) => {
+  const key = message.data?.key || {}
+  const candidates = message.isGroup
+    ? [
+        message.participantAlt,
+        key.participantAlt,
+        message.data?.participantAlt,
+        message.participant,
+        key.participant,
+      ]
+    : [
+        message.remoteJidAlt,
+        message.jidAlt,
+        key.remoteJidAlt,
+        message.data?.remoteJidAlt,
+        message.jid,
+        key.remoteJid,
+      ]
+
+  return candidates.find((jid) => String(jid || '').endsWith('@s.whatsapp.net')) || ''
+}
+
+const formatClientNumber = (message) => {
+  const phoneJid = getClientPhoneJid(message)
+  const number = normalizePhone(String(phoneJid).split('@')[0].split(':')[0])
+  return number ? `+${number}` : 'Número no disponible'
 }
 
 const sendDirect = async (client, jid, text, extra = {}) => {
@@ -378,7 +401,7 @@ const notifyStaff = async (message, { reason, question = '', session, requestId 
 
   const alert = [
     '🚨 *AnimalesExpress · revisión humana*',
-    `Cliente: ${formatClientJid(message.jid)}`,
+    `Cliente: ${formatClientNumber(message)}`,
     `Motivo: ${reason}`,
     details,
     '',
@@ -402,10 +425,11 @@ const notifyStaff = async (message, { reason, question = '', session, requestId 
 }
 
 const finishRegistration = async (message, session) => {
+  const clientNumber = formatClientNumber(message)
   const requestId = await appendLead({
     jid: message.isGroup
-      ? `${message.jid} · ${message.participant || 'participante desconocido'}`
-      : message.jid,
+      ? `${message.jid} · ${clientNumber}`
+      : clientNumber,
     name: session.name,
     pickupPostalCode: session.pickupPostalCode,
     pickupTown: session.pickupTown,

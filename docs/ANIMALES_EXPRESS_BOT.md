@@ -103,6 +103,8 @@ Al completar los datos crea una fila en `Solicitudes bot`, envía el formulario 
 
 Durante el registro, una respuesta inválida muestra una sola indicación con el formato esperado. El cliente puede abandonar el flujo escribiendo expresiones como `cancelar`, `ya no quiero`, `no lo quiero` o `déjalo`; el bot elimina inmediatamente la solicitud pendiente y confirma la cancelación.
 
+Los avisos internos y la columna de contacto de `Solicitudes bot` utilizan el JID telefónico alternativo de WhatsApp cuando el chat llega identificado mediante `@lid`. Un LID nunca se presenta como si fuera un número de teléfono; si WhatsApp no entrega el JID telefónico, aparece `Número no disponible`.
+
 ## Intervención humana
 
 - Los mensajes enviados manualmente por Ulises se distinguen de las respuestas generadas por el plugin.
