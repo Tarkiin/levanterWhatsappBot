@@ -35,6 +35,17 @@ const WHATSAPP_SEND_DELAY_MS = Math.max(
 )
 const recentBotOutbound = new Map()
 const privateQueues = new Map()
+const privateMessageBatches = new Map()
+const PRIVATE_BATCH_WINDOW_MS = Math.min(
+  30000,
+  Math.max(10, Number(process.env.AE_PRIVATE_BATCH_WINDOW_MS || 8000))
+)
+const PRIVATE_BATCH_MAX_WAIT_MS = Math.min(
+  120000,
+  Math.max(PRIVATE_BATCH_WINDOW_MS, Number(process.env.AE_PRIVATE_BATCH_MAX_WAIT_MS || 30000))
+)
+const PRIVATE_BATCH_MAX_MESSAGES = 10
+const PRIVATE_BATCH_MAX_CHARS = 6000
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -100,6 +111,51 @@ const enqueuePrivate = (jid, task) => {
     if (privateQueues.get(jid) === tracked) privateQueues.delete(jid)
   })
 }
+
+const flushPrivateMessageBatch = (jid) => {
+  const batch = privateMessageBatches.get(jid)
+  if (!batch) return
+  privateMessageBatches.delete(jid)
+  clearTimeout(batch.timer)
+
+  const latestMessage = batch.items.at(-1).message
+  const combinedText = batch.items
+    .map(({ text }) => String(text || '').trim())
+    .filter(Boolean)
+    .join('\n')
+    .slice(0, PRIVATE_BATCH_MAX_CHARS)
+  const processing = enqueuePrivate(jid, () => handlePrivateText(latestMessage, combinedText))
+  processing.then(
+    (result) => batch.items.forEach(({ resolve }) => resolve(result)),
+    (error) => batch.items.forEach(({ reject }) => reject(error))
+  )
+}
+
+const enqueuePrivateMessageBatch = (message, text) =>
+  new Promise((resolve, reject) => {
+    const jid = message.jid
+    const batch = privateMessageBatches.get(jid) || {
+      startedAt: Date.now(),
+      items: [],
+      timer: undefined,
+    }
+    batch.items.push({ message, text, resolve, reject })
+    privateMessageBatches.set(jid, batch)
+    clearTimeout(batch.timer)
+
+    const elapsed = Date.now() - batch.startedAt
+    const remainingMaxWait = Math.max(0, PRIVATE_BATCH_MAX_WAIT_MS - elapsed)
+    const combinedLength = batch.items.reduce(
+      (total, item) => total + String(item.text || '').length,
+      0
+    )
+    const flushNow =
+      batch.items.length >= PRIVATE_BATCH_MAX_MESSAGES ||
+      combinedLength >= PRIVATE_BATCH_MAX_CHARS ||
+      remainingMaxWait === 0
+    const delay = flushNow ? 0 : Math.min(PRIVATE_BATCH_WINDOW_MS, remainingMaxWait)
+    batch.timer = setTimeout(() => flushPrivateMessageBatch(jid), delay)
+  })
 
 const findReactionKey = (value, depth = 0, seen = new WeakSet()) => {
   if (!value || typeof value !== 'object' || depth > 3 || seen.has(value)) return null
@@ -763,7 +819,10 @@ bot(
     if (!isPrivateUserJid(message.jid) || isExcludedPrivateNumber(message.jid, config)) {
       return
     }
-    return enqueuePrivate(message.jid, () => handlePrivateText(message, text))
+    if (getActiveSession(message) || wantsRegistration(text)) {
+      return enqueuePrivate(message.jid, () => handlePrivateText(message, text))
+    }
+    return enqueuePrivateMessageBatch(message, text)
   }
 )
 

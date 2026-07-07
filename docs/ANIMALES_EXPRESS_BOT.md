@@ -50,6 +50,8 @@ AE_AI_MIN_INTERVAL_MS=5000
 AE_AI_TIMEOUT_MS=20000
 AE_AI_MAX_RETRIES=1
 AE_WHATSAPP_SEND_DELAY_MS=5000
+AE_PRIVATE_BATCH_WINDOW_MS=8000
+AE_PRIVATE_BATCH_MAX_WAIT_MS=30000
 AE_CONVERSATION_RETENTION_DAYS=30
 ```
 
@@ -76,6 +78,8 @@ Los envíos de WhatsApp generados por AnimalesExpress desactivan la vista previa
 El razonamiento de GLM se envía desactivado porque las comprobaciones operativas ya se realizan mediante código y se priorizan respuestas rápidas.
 
 Las respuestas conversacionales, incluidas las preguntas sencillas sobre la empresa o fuera de contexto, se redactan con Z.AI. El prompt permite uno o dos emojis ocasionales cuando resulten naturales, evitando usarlos de forma repetitiva.
+
+En chats privados, los mensajes conversacionales se agrupan mientras el cliente continúa escribiendo. El contador se reinicia con cada mensaje y el bloque se procesa después de ocho segundos de silencio (`AE_PRIVATE_BATCH_WINDOW_MS`). Todos los fragmentos se envían juntos a Z.AI y generan una sola respuesta. El bloque se fuerza como máximo a los treinta segundos (`AE_PRIVATE_BATCH_MAX_WAIT_MS`), diez mensajes o 6000 caracteres. El registro paso a paso no utiliza esta agrupación para no mezclar campos distintos.
 
 ## Comandos
 
