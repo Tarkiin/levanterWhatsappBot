@@ -3,6 +3,15 @@ const { Client, logger } = require('./lib/client')
 const { DATABASE, VERSION } = require('./config')
 const { stopInstance } = require('./lib/pm2')
 
+// Parche de seguridad para evitar logout inesperado por addAudioMetaData.
+// No desactiva plugins de audio; solo hace segura la función de metadatos.
+try {
+  const lib = require('./lib')
+  lib.addAudioMetaData = async (buffer) => buffer
+} catch (error) {
+  console.error('Error al aplicar parche addAudioMetaData:', error)
+}
+
 const start = async () => {
   logger.info(`levanter ${VERSION}`)
 

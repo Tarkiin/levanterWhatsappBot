@@ -1,12 +1,16 @@
 # Asistente de AnimalesExpress
 
-El plugin `plugins/animalesExpress.js` atiende consultas con el prefijo `.ae`, consulta rutas y clientes en Google Sheets y utiliza la API cloud de Z.AI para redactar respuestas naturales.
+El plugin `plugins/animalesExpress.js` atiende automáticamente todos los chats privados de texto, mantiene los comandos `.ae` en grupos, consulta datos autorizados de Google Sheets y utiliza la API cloud de Z.AI para redactar respuestas naturales.
 
 ## Arquitectura actual
 
-- **WhatsApp:** Levanter recibe exclusivamente los mensajes que empiezan por `.ae`, salvo las respuestas a un registro ya iniciado.
+- **WhatsApp privado:** todo mensaje de texto entrante recibe atención automática, salvo los números excluidos y los cinco minutos posteriores a una respuesta manual de Ulises.
+- **WhatsApp grupos:** solo actúa con `.ae`, `.ae ai <pregunta>` o durante un registro iniciado expresamente.
 - **Datos:** Google Sheets mantiene rutas, fichas de clientes y solicitudes nuevas.
 - **IA:** `glm-4.7-flash` se consume mediante la API compatible con OpenAI de Z.AI.
+- **Privacidad de contexto:** la conversación pública solo recibe rutas publicadas y la base empresarial. Las fichas, solicitudes y respuestas brutas del formulario nunca se incorporan al prompt público.
+- **Memoria:** la información empresarial vive de forma permanente en `data/animalesexpress.md`; las conversaciones privadas se guardan 30 días en `data/animalesexpress-conversations.json`.
+- **Multimedia:** no se procesa; este despliegue usa exclusivamente texto.
 - **Servidor:** no necesita Ollama, llama.cpp, LM Studio ni modelos GGUF locales.
 - **Exactitud:** la búsqueda de clientes y la comprobación del sentido de las rutas se hacen mediante código antes de invocar la IA.
 
@@ -37,6 +41,14 @@ AE_LM_STUDIO_API_KEY=CLAVE_PRIVADA_DE_ZAI
 AE_GOOGLE_SHEET_ID=ID_DEL_SPREADSHEET
 AE_GOOGLE_SERVICE_ACCOUNT_FILE=/home/joel/.config/levanter/credentials/animalesexpress.json
 AE_STAFF_GROUPS=120000000000000000@g.us,120000000000000001@g.us
+AE_NOTIFICATION_GROUP=120363410600147851@g.us
+AE_ULISES_JID=34671982095@s.whatsapp.net
+AE_DAYANA_JID=34617886170@s.whatsapp.net
+AE_PRIVATE_EXCLUDED_NUMBERS=655000000
+AE_AI_TEMPERATURE=0.1
+AE_AI_MIN_INTERVAL_MS=5000
+AE_WHATSAPP_SEND_DELAY_MS=5000
+AE_CONVERSATION_RETENTION_DAYS=30
 ```
 
 Los nombres `AE_LM_STUDIO_*` se conservan por compatibilidad histórica, aunque el proveedor activo sea Z.AI. Protege el archivo:
@@ -53,7 +65,9 @@ Para obtener el ID de un grupo, escribe `.ae id` dentro del grupo. Se pueden aut
 
 Z.AI publica `glm-4.7-flash` con coste cero para tokens de entrada, caché y salida. Los límites concretos de cada API key se consultan en el panel de *Rate Limits* de Z.AI.
 
-La cuenta probada admite una sola petición simultánea. El servicio contiene una cola en memoria que serializa las llamadas a Z.AI: si llegan varios comandos, el segundo conserva la reacción `⏳` y espera a que termine el anterior. Esto evita errores HTTP `429` por concurrencia.
+El servicio contiene una cola global que serializa las llamadas a Z.AI y deja al menos cinco segundos entre ellas. Cada chat privado también mantiene su propia cola para conservar el orden de los mensajes. Esto evita concurrencia descontrolada y reduce errores HTTP `429`.
+
+Los envíos de WhatsApp generados por AnimalesExpress desactivan la vista previa de enlaces y separan los avisos internos al menos `AE_WHATSAPP_SEND_DELAY_MS` milisegundos. Esto reduce picos al terminar una solicitud y evita mandar el mensaje al cliente, el aviso al grupo y el aviso privado a la vez.
 
 El razonamiento de GLM se envía desactivado porque las comprobaciones operativas ya se realizan mediante código y se priorizan respuestas rápidas.
 
@@ -65,6 +79,7 @@ El razonamiento de GLM se envía desactivado porque las comprobaciones operativa
 .ae rutas
 .ae formulario
 .ae registrar
+.ae ai ¿Qué ruta hay de Madrid a Valencia?
 .ae Busco transporte de Madrid a Valencia para 2 pájaros
 .ae cliente Juan Rodríguez
 .ae dime el número de "Juan Rodríguez" y a dónde va
@@ -75,20 +90,34 @@ Las búsquedas internas solo funcionan en los grupos incluidos en `AE_STAFF_GROU
 
 ## Flujo de clientes
 
-El registro solicita:
+En privado, expresiones como `quiero contratar`, `necesito transporte` o `quiero presupuesto` inician el registro. También puede iniciarse con `.ae registrar`. El flujo solicita:
 
-1. Código postal de recogida.
-2. Código postal de entrega.
-3. Cantidad y especie de animales.
+1. Nombre.
+2. Código postal y población de recogida.
+3. Código postal y población de entrega.
+4. Cantidad y especie de animales.
+5. Fecha aproximada.
+6. Observaciones.
 
-Al completar los tres datos crea una fila en `Solicitudes bot`. El personal continúa confirmando fecha y precio manualmente.
+Al completar los datos crea una fila en `Solicitudes bot`, envía el formulario oficial al cliente y avisa en el grupo interno mencionando a Ulises y Dayana. También envía un aviso privado a Dayana. El personal continúa confirmando viabilidad, fecha y precio manualmente.
+
+## Intervención humana
+
+- Los mensajes enviados manualmente por Ulises se distinguen de las respuestas generadas por el plugin.
+- Una respuesta manual pausa el asistente cinco minutos en ese chat.
+- Las respuestas humanas se conservan dentro del contexto para que la IA no repita ni contradiga al operador.
+- Si falta información comprobable, el proveedor falla, el cliente pide una persona o comunica una incidencia, el bot da una respuesta segura y avisa al equipo.
+- Los avisos se agrupan con un enfriamiento de quince minutos por chat para evitar spam interno.
+- En chats privados nunca se muestran estados, direcciones, DNI, teléfonos ni datos de reservas. `.ae cliente ...` continúa limitado a los grupos incluidos en `AE_STAFF_GROUPS`.
 
 ## Estado y errores
 
 - Al comenzar cualquier comando `.ae`, el bot reacciona con `⏳` y retira la reacción al responder.
 - Si el proveedor no responde, la clave es inválida, se supera un límite o la API devuelve otro error, WhatsApp muestra un aviso genérico: `La IA no responde o devolvió un error`. El proveedor no se revela al usuario.
 - `.ae estado` comprueba Google Sheets, conectividad con Z.AI y disponibilidad del modelo.
+- La temperatura predeterminada es `0.1`; rutas, búsquedas y decisiones de acceso se validan mediante código y no se dejan a la creatividad del modelo.
 - Los detalles técnicos se registran en PM2 sin imprimir la clave:
+- El último plugin/comando ejecutado queda guardado en `data/last-command.json` y también aparece como `[CommandAudit]` en los logs. Si WhatsApp vuelve a expulsar la sesión, ese archivo indica qué handler se ejecutó justo antes.
 
 ```sh
 pm2 logs levanter --lines 100
