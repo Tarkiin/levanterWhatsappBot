@@ -45,7 +45,7 @@ AE_NOTIFICATION_GROUP=120363410600147851@g.us
 AE_ULISES_JID=34671982095@s.whatsapp.net
 AE_DAYANA_JID=34617886170@s.whatsapp.net
 AE_PRIVATE_EXCLUDED_NUMBERS=655000000
-AE_AI_TEMPERATURE=0.1
+AE_AI_TEMPERATURE=0.2
 AE_AI_MIN_INTERVAL_MS=5000
 AE_AI_TIMEOUT_MS=20000
 AE_AI_MAX_RETRIES=1
@@ -68,6 +68,8 @@ Para obtener el ID de un grupo, escribe `.ae id` dentro del grupo. Se pueden aut
 Z.AI publica `glm-4.7-flash` con coste cero para tokens de entrada, caché y salida. Los límites concretos de cada API key se consultan en el panel de *Rate Limits* de Z.AI.
 
 El servicio contiene una cola global que serializa las llamadas a Z.AI y deja al menos cinco segundos entre ellas. Cada chat privado también mantiene su propia cola para conservar el orden de los mensajes. Esto evita concurrencia descontrolada y reduce errores HTTP `429`.
+
+Las preguntas empresariales más frecuentes se resuelven localmente y de forma inmediata antes de llamar a Z.AI: funcionamiento del transporte, disponibilidad de envíos de animales, precios orientativos, alcance nacional o internacional, especies y consultas sobre productos ajenos al servicio. Esto mantiene una atención útil cuando el proveedor está saturado y reduce el consumo de su límite de peticiones.
 
 Cada intento contra Z.AI tiene un máximo predeterminado de veinte segundos (`AE_AI_TIMEOUT_MS=20000`) y solo se reintenta una vez (`AE_AI_MAX_RETRIES=1`). El reintento se programa rápidamente, pero vuelve a pasar por la cola global y respeta su separación mínima antes de llamar al proveedor. Si Z.AI devuelve `429`, `5xx` o deja una conexión colgada, la petición se abandona en un tiempo acotado, se libera la cola privada y el cliente recibe el aviso seguro en vez de quedarse sin respuesta durante varios minutos.
 
@@ -123,7 +125,7 @@ Los avisos internos y la columna de contacto de `Solicitudes bot` utilizan el JI
 - Al comenzar cualquier comando `.ae`, el bot reacciona con `⏳` y retira la reacción al responder.
 - Si el proveedor no responde, la clave es inválida, se supera un límite o la API devuelve otro error, WhatsApp muestra un aviso genérico: `La IA no responde o devolvió un error`. El proveedor no se revela al usuario.
 - `.ae estado` comprueba Google Sheets, conectividad con Z.AI y disponibilidad del modelo.
-- La temperatura predeterminada es `0.1`; rutas, búsquedas y decisiones de acceso se validan mediante código y no se dejan a la creatividad del modelo.
+- La temperatura predeterminada es `0.2`; rutas, búsquedas y decisiones de acceso se validan mediante código y no se dejan a la creatividad del modelo.
 - Los detalles técnicos se registran en PM2 sin imprimir la clave:
 - El último plugin/comando ejecutado queda guardado en `data/last-command.json` y también aparece como `[CommandAudit]` en los logs. Si WhatsApp vuelve a expulsar la sesión, ese archivo indica qué handler se ejecutó justo antes.
 

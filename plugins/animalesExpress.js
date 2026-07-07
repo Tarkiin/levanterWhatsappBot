@@ -1,6 +1,7 @@
 const { bot } = require('../lib')
 const conversationStore = require('../lib/animalesExpressConversationStore')
 const {
+  answerKnownFaq,
   answerPrivateQuestion,
   answerPublicQuestion,
   answerStaffQuestion,
@@ -704,6 +705,17 @@ const handlePrivateText = async (message, text) => {
   if (wantsRegistration(text)) {
     createSession(message, text)
     return processRegistrationInput(message, text)
+  }
+
+  const knownAnswer = answerKnownFaq(text)
+  if (knownAnswer) {
+    const firstGreeting = history.length
+      ? ''
+      : '🐾✨ *Soy el asistente virtual de AnimalesExpress.*'
+    return send(message, [firstGreeting, knownAnswer].filter(Boolean).join('\n\n'), {
+      clearReaction: false,
+      rememberConversation: true,
+    })
   }
 
   try {
