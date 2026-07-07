@@ -69,13 +69,13 @@ Z.AI publica `glm-4.7-flash` con coste cero para tokens de entrada, caché y sal
 
 El servicio contiene una cola global que serializa las llamadas a Z.AI y deja al menos cinco segundos entre ellas. Cada chat privado también mantiene su propia cola para conservar el orden de los mensajes. Esto evita concurrencia descontrolada y reduce errores HTTP `429`.
 
-Las preguntas empresariales más frecuentes se resuelven localmente y de forma inmediata antes de llamar a Z.AI: funcionamiento del transporte, disponibilidad de envíos de animales, precios orientativos, alcance nacional o internacional, especies y consultas sobre productos ajenos al servicio. Esto mantiene una atención útil cuando el proveedor está saturado y reduce el consumo de su límite de peticiones.
-
 Cada intento contra Z.AI tiene un máximo predeterminado de veinte segundos (`AE_AI_TIMEOUT_MS=20000`) y solo se reintenta una vez (`AE_AI_MAX_RETRIES=1`). El reintento se programa rápidamente, pero vuelve a pasar por la cola global y respeta su separación mínima antes de llamar al proveedor. Si Z.AI devuelve `429`, `5xx` o deja una conexión colgada, la petición se abandona en un tiempo acotado, se libera la cola privada y el cliente recibe el aviso seguro en vez de quedarse sin respuesta durante varios minutos.
 
 Los envíos de WhatsApp generados por AnimalesExpress desactivan la vista previa de enlaces y separan los avisos internos al menos `AE_WHATSAPP_SEND_DELAY_MS` milisegundos. Esto reduce picos al terminar una solicitud y evita mandar el mensaje al cliente, el aviso al grupo y el aviso privado a la vez.
 
 El razonamiento de GLM se envía desactivado porque las comprobaciones operativas ya se realizan mediante código y se priorizan respuestas rápidas.
+
+Las respuestas conversacionales, incluidas las preguntas sencillas sobre la empresa o fuera de contexto, se redactan con Z.AI. El prompt permite uno o dos emojis ocasionales cuando resulten naturales, evitando usarlos de forma repetitiva.
 
 ## Comandos
 
