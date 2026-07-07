@@ -113,6 +113,8 @@ En privado, expresiones como `quiero contratar`, `necesito transporte` o `quiero
 5. Fecha aproximada.
 6. Observaciones.
 
+Expresiones como `estoy interesado en un transporte` o `me interesa un envío` también inician este flujo. El asistente solicita únicamente un dato por mensaje y muestra un ejemplo concreto en cada paso; nunca presenta al cliente una lista completa de campos para responder de una sola vez.
+
 Al completar los datos crea una fila en `Solicitudes bot`, envía el formulario oficial al cliente con vista previa y avisa en el grupo interno para que Ulises y Dayana lo revisen. No envía aviso privado separado a Dayana ni menciones reales de WhatsApp. El personal continúa confirmando viabilidad, fecha y precio manualmente.
 
 Durante el registro, una respuesta inválida muestra una sola indicación con el formato esperado. El cliente puede abandonar el flujo escribiendo expresiones como `cancelar`, `ya no quiero`, `no lo quiero` o `déjalo`; el bot elimina inmediatamente la solicitud pendiente y confirma la cancelación.

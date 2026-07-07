@@ -377,7 +377,7 @@ const updateSession = (session, text) => {
 const nextQuestion = (session) => {
   if (!session.name) {
     session.awaiting = 'name'
-    return 'Para preparar la solicitud, ¿cuál es tu *nombre*?'
+    return 'Para preparar la solicitud, ¿cuál es tu *nombre*?\nEjemplo: Ana García'
   }
   if (!session.pickupPostalCode || !session.pickupTown) {
     session.awaiting = 'pickup'
@@ -389,15 +389,15 @@ const nextQuestion = (session) => {
   }
   if (!session.animals) {
     session.awaiting = 'animals'
-    return '¿Qué *cantidad y especie de animales* necesitas transportar?'
+    return '¿Qué *cantidad y especie de animales* necesitas transportar?\nEjemplo: 2 perros'
   }
   if (!session.approximateDate) {
     session.awaiting = 'date'
-    return '¿Para qué *fecha aproximada* necesitas el transporte?'
+    return '¿Para qué *fecha aproximada* necesitas el transporte?\nEjemplo: 15 de julio'
   }
   if (!session.observations) {
     session.awaiting = 'observations'
-    return '¿Hay alguna necesidad especial u observación? Puedes responder *ninguna*.'
+    return '¿Hay alguna *necesidad especial u observación*?\nEjemplo: Ninguna'
   }
   return ''
 }
@@ -540,7 +540,7 @@ const processRegistrationInput = async (message, text) => {
   saveSession(message, session)
   if (question) {
     const intro = session.introPending
-      ? '🐾✨ *Soy el asistente virtual de AnimalesExpress.* Estoy aquí para ayudarte con tu transporte.'
+      ? '🐾✨ *Soy el asistente virtual de AnimalesExpress.* Te pediré la información necesaria *paso a paso* para preparar tu transporte.'
       : ''
     session.introPending = false
     saveSession(message, session)
@@ -734,7 +734,12 @@ bot(
 const wantsRegistration = (text = '') =>
   /\b(?:contratar|reservar|presupuesto|solicitud|transportar|trasladar|enviar|recoger)\b/i.test(
     text
-  ) || /\b(?:quiero|necesito|busco)\s+(?:un\s+)?transporte\b/i.test(text)
+  ) ||
+  /\b(?:quiero|necesito|busco)\s+(?:un\s+)?transporte\b/i.test(text) ||
+  /\b(?:estoy|estamos)\s+interesad[oa]s?\b.{0,80}\b(?:transporte|env[ií]o|traslado)\b/i.test(
+    text
+  ) ||
+  /\bme interesa\b.{0,80}\b(?:transporte|env[ií]o|traslado)\b/i.test(text)
 
 const requiresHumanByPolicy = (text = '') =>
   /(?:hablar|contactar|atender|responder).{0,30}\b(?:persona|humano|ulises|dayana)\b|\b(?:ulises|dayana)\b.{0,30}(?:hablar|contactar|atender|responder)/i.test(
