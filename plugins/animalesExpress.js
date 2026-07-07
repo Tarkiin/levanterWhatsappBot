@@ -38,7 +38,7 @@ const privateQueues = new Map()
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const sendOptions = (options = {}) => ({ ...options, linkPreview: false })
+const sendOptions = (options = {}, linkPreview = false) => ({ ...options, linkPreview })
 
 const waitBetweenWhatsAppSends = async () => {
   if (WHATSAPP_SEND_DELAY_MS > 0) await sleep(WHATSAPP_SEND_DELAY_MS)
@@ -180,10 +180,10 @@ const reactToCommand = async (message, text) => {
 const send = async (
   message,
   text,
-  { clearReaction = true, rememberConversation = false } = {}
+  { clearReaction = true, rememberConversation = false, linkPreview = false } = {}
 ) => {
   if (!message.isGroup) rememberBotOutbound(message.jid, text)
-  const result = await message.send(text, sendOptions({ quoted: message.data }))
+  const result = await message.send(text, sendOptions({ quoted: message.data }, linkPreview))
   if (rememberConversation && !message.isGroup) {
     conversationStore.appendMessage(message.jid, 'assistant', text)
     conversationStore.setTimestamp(message.jid, 'lastAiAt')
@@ -235,6 +235,25 @@ const saveSession = (message, session) => {
 const clearSession = (message) => {
   if (message.isGroup) sessions.delete(sessionKey(message))
   else conversationStore.clearRegistration(message.jid)
+}
+
+const wantsToCancelRegistration = (text = '') => {
+  const value = String(text)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return (
+    /^(?:cancela|cancelar|salir|parar)$/.test(value) ||
+    /\b(?:ya no|no) (?:lo )?quiero(?: seguir| continuar)?\b/.test(value) ||
+    /\b(?:no me interesa|dejalo|olvidalo|cancelalo)\b/.test(value) ||
+    /\b(?:quiero cancelar|cancela(?:r)? (?:el |la )?(?:registro|solicitud|proceso))\b/.test(
+      value
+    )
+  )
 }
 
 const cleanTown = (text) =>
@@ -363,16 +382,13 @@ const notifyStaff = async (message, { reason, question = '', session, requestId 
     `Motivo: ${reason}`,
     details,
     '',
-    `@${normalizePhone(config.ulisesJid)} @${normalizePhone(config.dayanaJid)}`,
+    'Equipo: Ulises y Dayana',
   ]
     .filter(Boolean)
     .join('\n')
 
   const deliveries = [
-    () =>
-      sendDirect(message.client, config.notificationGroup, alert, {
-        mentions: [config.ulisesJid, config.dayanaJid],
-      }),
+    () => sendDirect(message.client, config.notificationGroup, alert),
   ]
 
   for (let index = 0; index < deliveries.length; index += 1) {
@@ -404,7 +420,11 @@ const finishRegistration = async (message, session) => {
   const result = await send(
     message,
     `✅ Gracias. He registrado tu solicitud *${requestId}*.\n\nEl equipo confirmará la viabilidad, fecha y precio. Los portes son desde *50 €*. Para completar los datos de contratación utiliza este formulario:\n${FORM_URL}`,
-    { clearReaction: message.isGroup, rememberConversation: !message.isGroup }
+    {
+      clearReaction: message.isGroup,
+      rememberConversation: !message.isGroup,
+      linkPreview: true,
+    }
   )
   await waitBetweenWhatsAppSends()
   await notifyStaff(message, {
@@ -419,6 +439,18 @@ const processRegistrationInput = async (message, text) => {
   const session = getActiveSession(message)
   if (!session) return
 
+  if (wantsToCancelRegistration(text)) {
+    clearSession(message)
+    return send(
+      message,
+      'De acuerdo, he cancelado la solicitud. Si más adelante necesitas un transporte, escríbeme de nuevo.',
+      {
+        clearReaction: message.isGroup,
+        rememberConversation: !message.isGroup,
+      }
+    )
+  }
+
   const validationError = updateSession(session, text)
   const question = nextQuestion(session)
   saveSession(message, session)
@@ -428,7 +460,7 @@ const processRegistrationInput = async (message, text) => {
       : ''
     session.introPending = false
     saveSession(message, session)
-    return send(message, [intro, validationError, question].filter(Boolean).join('\n\n'), {
+    return send(message, [intro, validationError || question].filter(Boolean).join('\n\n'), {
       clearReaction: message.isGroup,
       rememberConversation: !message.isGroup,
     })
@@ -504,7 +536,7 @@ bot(
 
     if (!command || lower === 'ayuda') return send(message, helpText(staff))
 
-    if (lower === 'formulario') return send(message, FORM_MESSAGE)
+    if (lower === 'formulario') return send(message, FORM_MESSAGE, { linkPreview: true })
 
     if (!config.enabled) return send(message, 'El asistente de AnimalesExpress está desactivado.')
 
@@ -671,7 +703,10 @@ const handlePrivateText = async (message, text) => {
       )
     }
   } catch (error) {
-    console.error('[AnimalesExpress] Conversación privada:', error.message)
+    console.error(
+      '[AnimalesExpress] Conversación privada:',
+      error?.message || error?.stack || String(error)
+    )
     const fallback =
       'No quiero darte un dato incorrecto; voy a dejar la consulta pendiente para que la revise el equipo.'
     await send(message, fallback, {

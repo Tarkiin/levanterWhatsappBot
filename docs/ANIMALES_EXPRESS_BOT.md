@@ -99,7 +99,9 @@ En privado, expresiones como `quiero contratar`, `necesito transporte` o `quiero
 5. Fecha aproximada.
 6. Observaciones.
 
-Al completar los datos crea una fila en `Solicitudes bot`, envía el formulario oficial al cliente y avisa en el grupo interno mencionando a Ulises y Dayana. También envía un aviso privado a Dayana. El personal continúa confirmando viabilidad, fecha y precio manualmente.
+Al completar los datos crea una fila en `Solicitudes bot`, envía el formulario oficial al cliente con vista previa y avisa en el grupo interno para que Ulises y Dayana lo revisen. No envía aviso privado separado a Dayana ni menciones reales de WhatsApp. El personal continúa confirmando viabilidad, fecha y precio manualmente.
+
+Durante el registro, una respuesta inválida muestra una sola indicación con el formato esperado. El cliente puede abandonar el flujo escribiendo expresiones como `cancelar`, `ya no quiero`, `no lo quiero` o `déjalo`; el bot elimina inmediatamente la solicitud pendiente y confirma la cancelación.
 
 ## Intervención humana
 
