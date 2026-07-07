@@ -53,6 +53,7 @@ AE_AI_MAX_RETRIES=0
 AE_WHATSAPP_SEND_DELAY_MS=5000
 AE_PRIVATE_BATCH_WINDOW_MS=8000
 AE_PRIVATE_BATCH_MAX_WAIT_MS=30000
+AE_ASSISTANT_INTRO_IDLE_MS=600000
 AE_CONVERSATION_RETENTION_DAYS=30
 ```
 
@@ -81,6 +82,8 @@ El razonamiento de GLM se envía desactivado porque las comprobaciones operativa
 Las respuestas conversacionales, incluidas las preguntas sencillas sobre la empresa o fuera de contexto, se redactan con Z.AI. El prompt permite uno o dos emojis ocasionales cuando resulten naturales, evitando usarlos de forma repetitiva.
 
 En chats privados, los mensajes conversacionales se agrupan mientras el cliente continúa escribiendo. El contador se reinicia con cada mensaje y el bloque se procesa después de ocho segundos de silencio (`AE_PRIVATE_BATCH_WINDOW_MS`). Todos los fragmentos se envían juntos a Z.AI y generan una sola respuesta. El bloque se fuerza como máximo a los treinta segundos (`AE_PRIVATE_BATCH_MAX_WAIT_MS`), diez mensajes o 6000 caracteres. El registro paso a paso no utiliza esta agrupación para no mezclar campos distintos.
+
+En el primer contacto, y cuando el cliente vuelve a saludar después de diez minutos de inactividad (`AE_ASSISTANT_INTRO_IDLE_MS`), la respuesta comienza con `🐾✨ *Soy el asistente virtual de AnimalesExpress.*`. Z.AI recibe además instrucciones para destacar información importante con negrita de WhatsApp y utilizar emojis ocasionales con naturalidad.
 
 ## Comandos
 

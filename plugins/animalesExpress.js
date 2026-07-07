@@ -29,6 +29,10 @@ const sessions = new Map()
 const SESSION_TTL_MS = 30 * 60 * 1000
 const HUMAN_PAUSE_MS = 5 * 60 * 1000
 const ESCALATION_COOLDOWN_MS = 15 * 60 * 1000
+const ASSISTANT_INTRO_IDLE_MS = Math.min(
+  24 * 60 * 60 * 1000,
+  Math.max(60000, Number(process.env.AE_ASSISTANT_INTRO_IDLE_MS || 10 * 60 * 1000))
+)
 const WHATSAPP_SEND_DELAY_MS = Math.max(
   0,
   Number(process.env.AE_WHATSAPP_SEND_DELAY_MS || 5000)
@@ -741,6 +745,14 @@ const requiresHumanByPolicy = (text = '') =>
     text
   )
 
+const shouldIntroduceAssistant = (text, lastAiAt) => {
+  if (!lastAiAt) return true
+  const greeting = /^(?:hola|buenos d[ií]as|buenas tardes|buenas noches|hey|qu[eé] tal)\b/i.test(
+    String(text || '').trim()
+  )
+  return greeting && Date.now() - lastAiAt >= ASSISTANT_INTRO_IDLE_MS
+}
+
 const maybeNotifyEscalation = async (message, reason, question) => {
   const lastEscalatedAt = conversationStore.getTimestamp(message.jid, 'lastEscalatedAt')
   if (Date.now() - lastEscalatedAt < ESCALATION_COOLDOWN_MS) return
@@ -753,6 +765,10 @@ const handlePrivateText = async (message, text) => {
   conversationStore.appendMessage(message.jid, 'user', text)
 
   const lastHumanAt = conversationStore.getTimestamp(message.jid, 'lastHumanAt')
+  const lastAiAt = conversationStore.getTimestamp(message.jid, 'lastAiAt')
+  const assistantIntro = shouldIntroduceAssistant(text, lastAiAt)
+    ? '🐾✨ *Soy el asistente virtual de AnimalesExpress.*'
+    : ''
   if (Date.now() - lastHumanAt < HUMAN_PAUSE_MS) return
 
   if (getActiveSession(message)) return processRegistrationInput(message, text)
@@ -765,10 +781,7 @@ const handlePrivateText = async (message, text) => {
   try {
     const answer = await answerPrivateQuestion(text, history)
     const mustEscalate = answer.needsHuman || requiresHumanByPolicy(text)
-    const firstGreeting = history.length
-      ? ''
-      : '🐾✨ *Soy el asistente virtual de AnimalesExpress.*'
-    const response = [firstGreeting, answer.text].filter(Boolean).join('\n\n')
+    const response = [assistantIntro, answer.text].filter(Boolean).join('\n\n')
     await send(message, response, {
       clearReaction: false,
       rememberConversation: true,
@@ -789,7 +802,7 @@ const handlePrivateText = async (message, text) => {
     )
     const fallback =
       'No quiero darte un dato incorrecto; voy a dejar la consulta pendiente para que la revise el equipo.'
-    await send(message, fallback, {
+    await send(message, [assistantIntro, fallback].filter(Boolean).join('\n\n'), {
       clearReaction: false,
       rememberConversation: true,
     })
