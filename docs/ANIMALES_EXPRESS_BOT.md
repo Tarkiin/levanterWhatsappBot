@@ -36,7 +36,8 @@ Variables necesarias en `config.env`:
 ```env
 AE_ENABLED=true
 AE_LM_STUDIO_URL=https://api.z.ai/api/paas/v4/chat/completions
-AE_LM_STUDIO_MODEL=glm-4.7-flash
+AE_LM_STUDIO_MODEL=glm-4.5-flash
+AE_LM_STUDIO_FALLBACK_MODEL=glm-4.7-flash
 AE_LM_STUDIO_API_KEY=CLAVE_PRIVADA_DE_ZAI
 AE_GOOGLE_SHEET_ID=ID_DEL_SPREADSHEET
 AE_GOOGLE_SERVICE_ACCOUNT_FILE=/home/joel/.config/levanter/credentials/animalesexpress.json
@@ -47,8 +48,8 @@ AE_DAYANA_JID=34617886170@s.whatsapp.net
 AE_PRIVATE_EXCLUDED_NUMBERS=655000000
 AE_AI_TEMPERATURE=0.2
 AE_AI_MIN_INTERVAL_MS=5000
-AE_AI_TIMEOUT_MS=20000
-AE_AI_MAX_RETRIES=1
+AE_AI_TIMEOUT_MS=15000
+AE_AI_MAX_RETRIES=0
 AE_WHATSAPP_SEND_DELAY_MS=5000
 AE_PRIVATE_BATCH_WINDOW_MS=8000
 AE_PRIVATE_BATCH_MAX_WAIT_MS=30000
@@ -71,7 +72,7 @@ Z.AI publica `glm-4.7-flash` con coste cero para tokens de entrada, caché y sal
 
 El servicio contiene una cola global que serializa las llamadas a Z.AI y deja al menos cinco segundos entre ellas. Cada chat privado también mantiene su propia cola para conservar el orden de los mensajes. Esto evita concurrencia descontrolada y reduce errores HTTP `429`.
 
-Cada intento contra Z.AI tiene un máximo predeterminado de veinte segundos (`AE_AI_TIMEOUT_MS=20000`) y solo se reintenta una vez (`AE_AI_MAX_RETRIES=1`). El reintento se programa rápidamente, pero vuelve a pasar por la cola global y respeta su separación mínima antes de llamar al proveedor. Si Z.AI devuelve `429`, `5xx` o deja una conexión colgada, la petición se abandona en un tiempo acotado, se libera la cola privada y el cliente recibe el aviso seguro en vez de quedarse sin respuesta durante varios minutos.
+Cada intento contra Z.AI tiene un máximo predeterminado de quince segundos (`AE_AI_TIMEOUT_MS=15000`). Se utiliza `glm-4.5-flash` como modelo principal por su mejor disponibilidad observada y, si falla, la misma consulta vuelve a pasar por la cola global para probar automáticamente `glm-4.7-flash`; ambos son gratuitos. No se repite el mismo modelo (`AE_AI_MAX_RETRIES=0`): el segundo modelo actúa como recuperación y evita insistir sobre un endpoint saturado. Solo si ambos fallan se libera la cola con el aviso seguro al cliente.
 
 Los envíos de WhatsApp generados por AnimalesExpress desactivan la vista previa de enlaces y separan los avisos internos al menos `AE_WHATSAPP_SEND_DELAY_MS` milisegundos. Esto reduce picos al terminar una solicitud y evita mandar el mensaje al cliente, el aviso al grupo y el aviso privado a la vez.
 
