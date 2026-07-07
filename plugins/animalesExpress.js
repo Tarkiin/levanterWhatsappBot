@@ -373,12 +373,6 @@ const notifyStaff = async (message, { reason, question = '', session, requestId 
       sendDirect(message.client, config.notificationGroup, alert, {
         mentions: [config.ulisesJid, config.dayanaJid],
       }),
-    () =>
-      sendDirect(
-        message.client,
-        config.dayanaJid,
-        `🚨 *AnimalesExpress · aviso*\nCliente: ${formatClientJid(message.jid)}\nMotivo: ${reason}\n${details}`
-      ),
   ]
 
   for (let index = 0; index < deliveries.length; index += 1) {
