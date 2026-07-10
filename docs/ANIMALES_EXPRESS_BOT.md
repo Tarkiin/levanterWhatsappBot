@@ -67,6 +67,18 @@ pm2 save
 
 Para obtener el ID de un grupo, escribe `.ae id` dentro del grupo. Se pueden autorizar varios IDs separados por comas.
 
+## Números excluidos
+
+`AE_PRIVATE_EXCLUDED_NUMBERS` acepta varios números separados por comas. El asistente ignora completamente esos chats privados, pero el resto del bot continúa funcionando.
+
+```text
+.setvar exclude +34655000000
+.setvar exclude list
+.setvar exclude remove +34655000000
+```
+
+El comando actualiza inmediatamente el proceso y guarda la lista tanto en la configuración persistente de Levanter como en `config.env`; no requiere reiniciar el bot.
+
 ## Límites de GLM-4.7-Flash
 
 Z.AI publica `glm-4.7-flash` con coste cero para tokens de entrada, caché y salida. Los límites concretos de cada API key se consultan en el panel de *Rate Limits* de Z.AI.
